@@ -96,7 +96,10 @@ async def delete_entry(entry_type: str, entry_id: str):
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"deleted": True}
 
-from bson import ObjectId
+@app.get("/drafts", response_model=List[dict])
+async def get_drafts():
+    drafts = await db.drafts.find().to_list(None)
+    return [clean_mongo_doc(d) for d in drafts]
 
 @app.get("/drafts/{draft_id}", response_model=dict)
 async def get_draft(draft_id: str):

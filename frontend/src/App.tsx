@@ -1,92 +1,190 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const App = () => {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    experience: [
-      {
-        company: "",
-        role: "",
-        date: "",
-        bullets: [""],
+type Entry = {
+  _id: string;
+  id: string;
+  name: string;
+  type: "experience" | "education" | "project" | "contact";
+  [key: string]: any;
+};
+
+type Draft = {
+  _id: string;
+  draft_name: string;
+  name: string;
+  template_name: string;
+  contact_name?: string;
+  education_names?: string[];
+  experience_names?: string[];
+  project_names?: string[];
+  skills?: string[];
+  certificates?: string[];
+};
+
+export default function App() {
+  const [entries, setEntries] = useState<Record<string, Entry[]>>({});
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null);
+  const [entryEdits, setEntryEdits] = useState<Record<string, Entry>>({});
+
+  useEffect(() => {
+    const fetchEntries = async () => {
+      const types = ["experience", "education", "project", "contact"];
+      const groupedEntries: Record<string, Entry[]> = {};
+      for (const type of types) {
+        const res = await axios.get(`http://localhost:8000/entries/${type}`);
+        groupedEntries[type] = res.data;
+      }
+      setEntries(groupedEntries);
+    };
+
+    const fetchDrafts = async () => {
+      const res = await axios.get("http://localhost:8000/drafts");
+      setDrafts(res.data);
+    };
+
+    fetchEntries();
+    fetchDrafts();
+  }, []);
+
+  const handleEdit = (id: string, field: string, value: string) => {
+    setEntryEdits((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value,
       },
-    ],
-  });
-
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    }));
   };
 
-  const handleExperienceChange = (index: number, field: string, value: string) => {
-    const updated = [...form.experience];
-    updated[index][field] = value;
-    setForm((prev) => ({ ...prev, experience: updated }));
+  const saveEntry = async (entry: Entry) => {
+    const update = entryEdits[entry.id];
+    if (!update) return;
+    await axios.put(`http://localhost:8000/entries/${entry.type}/${entry.id}`, update);
+    setEntryEdits((prev) => {
+      const next = { ...prev };
+      delete next[entry.id];
+      return next;
+    });
+    // Refresh entries
+    const res = await axios.get(`http://localhost:8000/entries/${entry.type}`);
+    setEntries((prev) => ({ ...prev, [entry.type]: res.data }));
   };
 
-  const handleBulletChange = (expIdx: number, bulletIdx: number, value: string) => {
-    const updated = [...form.experience];
-    updated[expIdx].bullets[bulletIdx] = value;
-    setForm((prev) => ({ ...prev, experience: updated }));
+  const renderEntry = (entry: Entry) => {
+    const edited = entryEdits[entry.id] || entry;
+  
+    return (
+      <div key={entry.id} style={{ marginBottom: "1rem", borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>
+        <h4>{entry.type.toUpperCase()} Entry</h4>
+        {Object.entries(edited).map(([key, val]) => {
+          if (["_id", "id", "type"].includes(key)) return null;
+          if (Array.isArray(val)) {
+            return (
+              <div key={key}>
+                <label>{key}</label>
+                {val.map((v: string, idx: number) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    value={v}
+                    onChange={(e) => {
+                      const updatedList = [...val];
+                      updatedList[idx] = e.target.value;
+                      handleEdit(entry.id, key, updatedList);
+                    }}
+                    style={{ display: "block", width: "100%", marginBottom: "4px" }}
+                  />
+                ))}
+              </div>
+            );
+          } else {
+            return (
+              <div key={key}>
+                <label>{key}</label>
+                <input
+                  type="text"
+                  value={val}
+                  onChange={(e) => handleEdit(entry.id, key, e.target.value)}
+                  style={{ display: "block", width: "100%", marginBottom: "4px" }}
+                />
+              </div>
+            );
+          }
+        })}
+        <button onClick={() => saveEntry(entry)}>Save</button>
+      </div>
+    );
+  };
+  
+  const renderEntryGroup = (type: string) => {
+    const group = entries[type] || [];
+    return (
+      <div key={type} style={{ marginBottom: "2rem" }}>
+        <h3>{type.toUpperCase()}</h3>
+        {group.map(renderEntry)}
+      </div>
+    );
   };
 
-  const submit = async () => {
-    try {
-      const res = await axios.post("http://localhost:8000/generate-resume", form, {
-        responseType: "blob",
-      });
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-    } catch (err) {
-      console.error("Resume generation failed:", err);
-    }
+  const draftContains = (draft: Draft, type: string, entry: Entry): boolean => {
+    if (type === "contact") return draft.contact_name === entry.name;
+    const list = (draft as any)[`${type}_names`] || [];
+    return list.includes(entry.name);
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+    <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
       <h1>Resume Builder</h1>
-      <input placeholder="Name" value={form.name} onChange={(e) => handleChange("name", e.target.value)} />
-      <br />
-      <input placeholder="Email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} />
-      <br />
-      <input placeholder="Phone" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} />
-      <br />
-      <h3>Experience</h3>
-      {form.experience.map((exp, i) => (
-        <div key={i}>
-          <input
-            placeholder="Company"
-            value={exp.company}
-            onChange={(e) => handleExperienceChange(i, "company", e.target.value)}
-          />
-          <input
-            placeholder="Role"
-            value={exp.role}
-            onChange={(e) => handleExperienceChange(i, "role", e.target.value)}
-          />
-          <input
-            placeholder="Date"
-            value={exp.date}
-            onChange={(e) => handleExperienceChange(i, "date", e.target.value)}
-          />
-          <br />
-          {exp.bullets.map((b, j) => (
-            <input
-              key={j}
-              placeholder={`Bullet ${j + 1}`}
-              value={b}
-              onChange={(e) => handleBulletChange(i, j, e.target.value)}
-            />
-          ))}
+
+      <h2>All Entries</h2>
+      {["contact", "experience", "education", "project"].map(renderEntryGroup)}
+
+      <hr />
+
+      <h2>Select a Draft</h2>
+      <select
+        onChange={(e) => {
+          const draft = drafts.find((d) => d._id === e.target.value);
+          setSelectedDraft(draft || null);
+        }}
+      >
+        <option value="">-- Select Draft --</option>
+        {drafts.map((d) => (
+          <option key={d._id} value={d._id}>
+            {d.draft_name}
+          </option>
+        ))}
+      </select>
+
+      {selectedDraft && (
+        <div style={{ marginTop: "2rem" }}>
+          <h3>Draft: {selectedDraft.draft_name}</h3>
+          <p>
+            <strong>Template:</strong> {selectedDraft.template_name}
+          </p>
+          <p>
+            <strong>Resume Name:</strong> {selectedDraft.name}
+          </p>
+
+          {["contact", "experience", "education", "project"].map((type) => {
+            const group = entries[type] || [];
+            const matches = group.filter((e) => draftContains(selectedDraft, type, e));
+            return (
+              <div key={type} style={{ marginTop: "1.5rem" }}>
+                <strong>{type.toUpperCase()}:</strong>
+                <ul>
+                  {matches.map((e) => (
+                    <li key={e.id}>{e.name}</li>
+                  ))}
+                  {matches.length === 0 && <li>(none)</li>}
+                </ul>
+              </div>
+            );
+          })}
         </div>
-      ))}
-      <br />
-      <button onClick={submit}>Generate Resume PDF</button>
+      )}
     </div>
   );
-};
-
-export default App;
+}
