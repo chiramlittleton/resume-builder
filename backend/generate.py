@@ -29,41 +29,45 @@ def latex_escape(ctx, value):
 env.filters['latex_escape'] = latex_escape
 
 def generate_pdf(data: dict) -> str:
-    # Extract and remove template name from data
+    # Extract and remove template name
     template_name = data.pop("template_name", "resume")
     template = env.get_template(f"{template_name}.tex.j2")
 
     # Render LaTeX using Jinja2
     rendered_tex = template.render(data)
 
-    # Output to current working directory
+    # Prepare output file paths
     uid = uuid4().hex
     output_dir = Path(".")
     tex_file = output_dir / f"{uid}.tex"
     pdf_file = tex_file.with_suffix(".pdf")
 
-    # Save rendered .tex file
+    # Save .tex file
     with open(tex_file, "w") as f:
         f.write(rendered_tex)
 
-    # If the template uses a custom class file, copy it next to the .tex file
+    # Copy class file if used
     cls_path = Path("templates") / "my-resume.cls"
     if cls_path.exists():
         copyfile(cls_path, output_dir / "my-resume.cls")
 
     try:
-        subprocess.run(
-            ["pdflatex", str(tex_file.name)],
+        print(f"🧪 Running pdflatex on {tex_file.name}...")
+        result = subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", str(tex_file.name)],
             check=True,
             cwd=output_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+        print("✅ pdflatex finished successfully.")
     except subprocess.CalledProcessError as e:
         print("❌ LaTeX compilation failed!")
         print("\n--- Rendered LaTeX ---\n")
         print(rendered_tex)
-        print("\n--- stderr ---\n")
+        print("\n--- STDOUT ---\n")
+        print(e.stdout.decode())
+        print("\n--- STDERR ---\n")
         print(e.stderr.decode())
         raise
 
