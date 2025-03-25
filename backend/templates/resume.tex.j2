@@ -1,0 +1,17 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+
+\section*{Resume: {{ name }}}
+\textbf{Email:} {{ email }} \\
+\textbf{Phone:} {{ phone }}
+
+\section*{Experience}
+{% for job in experience %}
+\textbf{ {{ job.role }} at {{ job.company }} ({{ job.date }}) } \\
+{% for bullet in job.bullets %}
+- {{ bullet }} \\
+{% endfor %}
+{% endfor %}
+
+\end{document}

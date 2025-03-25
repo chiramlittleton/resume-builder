@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    container_name: resume-backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app  
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/resume_db
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:5.0
+    container_name: resume-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+
+  frontend:
+    build: ./frontend
+    container_name: resume-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    stdin_open: true
+    tty: true
+    depends_on:
+      - backend
