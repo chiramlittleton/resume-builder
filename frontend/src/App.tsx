@@ -27,6 +27,8 @@ export default function App() {
   const [edits, setEdits] = useState<Record<string, Entry>>({});
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
   const grouped = ["contact", "experience", "education", "project"];
 
@@ -45,8 +47,18 @@ export default function App() {
       setDrafts(await res.json());
     }
 
+    async function fetchTemplates() {
+      const res = await fetch("http://localhost:8000/templates");
+      const data = await res.json();
+      setTemplates(data);
+      if (data.length > 0) {
+        setSelectedTemplate(data[0]);
+      }
+    }
+
     fetchAll();
     fetchDrafts();
+    fetchTemplates();
   }, []);
 
   const handleEdit = (id: string, field: string, value: any) => {
@@ -91,11 +103,26 @@ export default function App() {
 
       <hr />
 
-      <DraftSelector
-        drafts={drafts}
-        selectedId={selectedDraftId}
-        onSelect={setSelectedDraftId}
-      />
+      <div style={{ marginBottom: "2rem" }}>
+        <label>Template: </label>
+        <select
+          value={selectedTemplate}
+          onChange={(e) => setSelectedTemplate(e.target.value)}
+          style={{ marginRight: "1rem" }}
+        >
+          {templates.map((template) => (
+            <option key={template} value={template}>
+              {template}
+            </option>
+          ))}
+        </select>
+      </div>
+
+    <DraftSelector
+      drafts={drafts.filter((d) => d.template_name === selectedTemplate)}
+      selectedId={selectedDraftId}
+      onSelect={setSelectedDraftId}
+    />
 
       {selectedDraft && (
         <DraftDetails draft={selectedDraft} entries={entries} />

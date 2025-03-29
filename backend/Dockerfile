@@ -7,10 +7,12 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /app
+WORKDIR /backend
+
+ENV PYTHONPATH=/
 
 # Copy backend code
-COPY . .
+COPY . /backend
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
@@ -19,4 +21,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8000
 
 # Run the server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
