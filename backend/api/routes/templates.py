@@ -5,7 +5,7 @@ router = APIRouter()
 
 @router.get("/templates")
 async def get_templates():
-    template_dir = Path("templates")
+    template_dir = Path("backend/templates")
     templates = [
         f.name.replace(".tex.j2", "") for f in template_dir.glob("*.tex.j2")
     ]

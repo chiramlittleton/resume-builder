@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import EntryGroup from "./EntryGroup";
 import DraftSelector from "./DraftSelector";
 import DraftDetails from "./DraftDetails";
+import BASE_URL from "./config";
 
 type Entry = {
   _id: string;
@@ -12,21 +13,22 @@ type Entry = {
 };
 
 type Draft = {
-  _id: string;
-  draft_name: string;
-  template_name: string;
+  draftName: string;
+  templateName: string;
   name: string;
-  contact_name?: string;
-  experience_names?: string[];
-  education_names?: string[];
-  project_names?: string[];
+  contact?: Entry;
+  experience?: Entry[];
+  education?: Entry[];
+  projects?: Entry[];
+  skills?: string[];
+  certificates?: string[];
 };
 
 export default function App() {
   const [entries, setEntries] = useState<Record<string, Entry[]>>({});
   const [edits, setEdits] = useState<Record<string, Entry>>({});
   const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [selectedDraftName, setSelectedDraftName] = useState<string | null>(null);
   const [templates, setTemplates] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
@@ -36,19 +38,61 @@ export default function App() {
     async function fetchAll() {
       const entryData: Record<string, Entry[]> = {};
       for (const type of grouped) {
-        const res = await fetch(`http://localhost:8000/entries/${type}`);
+        const res = await fetch(`${BASE_URL}/entries/${type}`);
         entryData[type] = await res.json();
       }
       setEntries(entryData);
     }
 
     async function fetchDrafts() {
-      const res = await fetch("http://localhost:8000/drafts");
-      setDrafts(await res.json());
+      const query = `
+        query {
+          drafts {
+            draftName
+            templateName
+            name
+            skills
+            certificates
+            contact {
+              name
+              email
+              phone
+              website
+            }
+            experience {
+              name
+              title
+              company
+              date
+              bullets
+            }
+            education {
+              name
+              school
+              degree
+              years
+            }
+            projects {
+              name
+              date
+              bullets
+            }
+          }
+        }
+      `;
+
+      const res = await fetch(`${BASE_URL}/graphql`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+
+      const json = await res.json();
+      setDrafts(json.data.drafts);
     }
 
     async function fetchTemplates() {
-      const res = await fetch("http://localhost:8000/templates");
+      const res = await fetch(`${BASE_URL}/templates`);
       const data = await res.json();
       setTemplates(data);
       if (data.length > 0) {
@@ -73,7 +117,7 @@ export default function App() {
 
   const handleSave = async (entry: Entry) => {
     const updated = edits[entry.id] || entry;
-    await fetch(`http://localhost:8000/entries/${entry.type}/${entry.id}`, {
+    await fetch(`${BASE_URL}/entries/${entry.type}/${entry.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updated),
@@ -81,7 +125,7 @@ export default function App() {
     window.location.reload();
   };
 
-  const selectedDraft = drafts.find((d) => d._id === selectedDraftId);
+  const selectedDraft = drafts.find((d) => d.draftName === selectedDraftName);
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -118,11 +162,11 @@ export default function App() {
         </select>
       </div>
 
-    <DraftSelector
-      drafts={drafts.filter((d) => d.template_name === selectedTemplate)}
-      selectedId={selectedDraftId}
-      onSelect={setSelectedDraftId}
-    />
+      <DraftSelector
+        drafts={drafts.filter((d) => d.templateName === selectedTemplate)}
+        selectedName={selectedDraftName}
+        onSelect={setSelectedDraftName}
+      />
 
       {selectedDraft && (
         <DraftDetails draft={selectedDraft} entries={entries} />

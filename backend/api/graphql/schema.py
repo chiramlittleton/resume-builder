@@ -6,6 +6,7 @@ from backend.api.util import clean_for_gql
 @strawberry.type
 class Contact:
     id: str
+    type: str
     name: str
     email: str
     phone: str
