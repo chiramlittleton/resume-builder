@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List
-from entries import Contact, EducationEntry, ExperienceEntry, ProjectEntry
+from .entries import Contact, EducationEntry, ExperienceEntry, ProjectEntry
 
 class ResumeData(BaseModel):
     template_name: str

@@ -168,9 +168,50 @@ export default function App() {
         onSelect={setSelectedDraftName}
       />
 
-      {selectedDraft && (
+    {selectedDraft && (
+      <>
         <DraftDetails draft={selectedDraft} entries={entries} />
-      )}
+
+        <div style={{ marginTop: "3rem", textAlign: "center" }}>
+          <button
+            style={{
+              fontSize: "1.5rem",
+              padding: "1rem 2rem",
+              backgroundColor: "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+            onClick={async () => {
+              if (!selectedDraft?.draftName) return;
+
+              const response = await fetch(
+                `http://localhost:8000/generate-draft-resume?draft_name=${selectedDraft.draftName}`,
+                {
+                  method: "POST",
+                }
+              );
+
+              if (!response.ok) {
+                alert("Failed to generate PDF");
+                return;
+              }
+
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "resume.pdf";
+              a.click();
+              window.URL.revokeObjectURL(url);
+            }}
+          >
+            📄 Render PDF
+          </button>
+        </div>
+      </>
+    )}
     </div>
   );
 }

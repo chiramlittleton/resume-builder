@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import GraphQLRouter
 
-from backend.api.routes import entries, drafts, templates
+from backend.api.routes import entries, drafts, templates, resumes
 from backend.api.graphql.schema import schema
 
 app = FastAPI()
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(entries.router)
 app.include_router(drafts.router)
 app.include_router(templates.router)
+app.include_router(resumes.router)
 
 # GraphQL route
 graphql_app = GraphQLRouter(schema)

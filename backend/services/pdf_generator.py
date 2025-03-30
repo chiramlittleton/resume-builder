@@ -6,7 +6,7 @@ from shutil import copyfile
 from jinja2 import Environment, FileSystemLoader, pass_context
 
 # Jinja2 environment setup
-env = Environment(loader=FileSystemLoader("templates"))
+env = Environment(loader=FileSystemLoader("backend/templates"))
 
 # LaTeX escape map for special characters
 LATEX_ESCAPE_MAP = {

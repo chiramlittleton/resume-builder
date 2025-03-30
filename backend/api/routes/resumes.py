@@ -1,18 +1,27 @@
-from fastapi import APIRouter
-from app.models.schemas import Entry
-from app.db.mongo import db
+from typing import Union
+
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException
+from fastapi.params import Body, Query
+from starlette.responses import FileResponse
+
+from backend.db.mongo import db
+from backend.models.base import TemplateOnly
+from backend.models.entries import Contact, EducationEntry, ExperienceEntry, ProjectEntry
+from backend.models.resume import ResumeData
+from backend.services.pdf_generator import generate_pdf
 
 router = APIRouter()
 
-@router.post("/generate-resume")
-def generate_resume(payload: Union[ResumeData, TemplateOnly] = Body(...)):
-    data = payload.dict()
-    pdf_path = generate_pdf(data)
-    return FileResponse(path=pdf_path, media_type="application/pdf", filename="resume.pdf")
+# @router.post("/generate-resume")
+# def generate_resume(payload: Union[ResumeData, TemplateOnly] = Body(...)):
+#     data = payload.dict()
+#     pdf_path = generate_pdf(data)
+#     return FileResponse(path=pdf_path, media_type="application/pdf", filename="resume.pdf")
 
 @router.post("/generate-draft-resume")
-async def generate_resume_from_draft(draft_id: str = Query(...)):
-    draft = await db.drafts.find_one({"_id": ObjectId(draft_id)})
+async def generate_resume_from_draft(draft_name: str = Query(...)):
+    draft = await db.drafts.find_one({"draft_name": draft_name})
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
 
