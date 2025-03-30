@@ -1,93 +1,134 @@
 import React from "react";
 
-export default function DraftDetails({ draft }) {
+type Entry = {
+  id: string;
+  name: string;
+  [key: string]: any;
+};
+
+type Draft = {
+  draftName: string;
+  templateName: string;
+  name: string;
+  contact?: Entry;
+  experience: Entry[];
+  education: Entry[];
+  projects: Entry[];
+  skills: string[];
+  certificates: string[];
+};
+
+type Props = {
+  draft: Draft;
+  entries: Record<string, Entry[]>;
+};
+
+export default function DraftDetails({ draft, entries }: Props) {
+  const handleContactChange = (id: string) => {
+    console.log(`Change contact to: ${id}`);
+    // Add actual update logic here
+  };
+
+  const handleEntryChange = (
+    type: "experience" | "education" | "projects",
+    index: number,
+    newId: string
+  ) => {
+    console.log(`Change ${type} entry at index ${index} to: ${newId}`);
+    // Add update logic here
+  };
+
+  const handleRemoveEntry = (
+    type: "experience" | "education" | "projects",
+    index: number
+  ) => {
+    console.log(`Remove ${type} entry at index ${index}`);
+    // Add update logic here
+  };
+
+  const handleAddEntry = (type: "experience" | "education" | "projects", id: string) => {
+    console.log(`Add ${type} entry with ID: ${id}`);
+    // Add logic here
+  };
+
   return (
     <div style={{ marginTop: "2rem" }}>
       <h3>Draft: {draft.draftName}</h3>
       <p><strong>Template:</strong> {draft.templateName}</p>
       <p><strong>Resume Name:</strong> {draft.name}</p>
 
-      {/* Contact */}
+      {/* Contact Selection */}
       <div style={{ marginTop: "1.5rem" }}>
         <strong>CONTACT:</strong>
-        {draft.contact ? (
-          <ul>
-            <li>{draft.contact.name} ({draft.contact.email})</li>
-          </ul>
-        ) : (
-          <ul><li>(none)</li></ul>
-        )}
+        <select
+          value={draft.contact?.id || ""}
+          onChange={(e) => handleContactChange(e.target.value)}
+        >
+          <option value="">Select a contact</option>
+          {(entries["contact"] || []).map((entry) => (
+            <option key={entry.id} value={entry.id}>
+              {entry.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Experience */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <strong>EXPERIENCE:</strong>
-        {draft.experience?.length ? (
-          <ul>
-            {draft.experience.map((e) => (
-              <li key={e.name}>
-                <strong>{e.title}</strong> at {e.company}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <ul><li>(none)</li></ul>
-        )}
-      </div>
+      {/* Entry Sections */}
+      {["experience", "education", "projects"].map((type) => {
+        const current = draft[type as keyof Draft] as Entry[];
+        const all = entries[type] || [];
+        return (
+          <div key={type} style={{ marginTop: "1.5rem" }}>
+            <strong>{type.toUpperCase()}:</strong>
+            {current.length > 0 ? (
+              current.map((entry, index) => (
+                <div key={entry.id} style={{ display: "flex", marginTop: "0.5rem" }}>
+                  <select
+                    value={entry.id}
+                    onChange={(e) =>
+                      handleEntryChange(type as any, index, e.target.value)
+                    }
+                  >
+                    {all.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => handleRemoveEntry(type as any, index)}
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p>(none)</p>
+            )}
 
-      {/* Education */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <strong>EDUCATION:</strong>
-        {draft.education?.length ? (
-          <ul>
-            {draft.education.map((e) => (
-              <li key={e.name}>
-                {e.degree}, {e.school}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <ul><li>(none)</li></ul>
-        )}
-      </div>
-
-      {/* Projects */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <strong>PROJECTS:</strong>
-        {draft.projects?.length ? (
-          <ul>
-            {draft.projects.map((p) => (
-              <li key={p.name}>{p.name}</li>
-            ))}
-          </ul>
-        ) : (
-          <ul><li>(none)</li></ul>
-        )}
-      </div>
-
-      {/* Skills */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <strong>SKILLS:</strong>
-        {draft.skills?.length ? (
-          <ul>
-            {draft.skills.map((s, i) => <li key={i}>{s}</li>)}
-          </ul>
-        ) : (
-          <ul><li>(none)</li></ul>
-        )}
-      </div>
-
-      {/* Certificates */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <strong>CERTIFICATES:</strong>
-        {draft.certificates?.length ? (
-          <ul>
-            {draft.certificates.map((c, i) => <li key={i}>{c}</li>)}
-          </ul>
-        ) : (
-          <ul><li>(none)</li></ul>
-        )}
-      </div>
+            {/* Add New Entry */}
+            <div style={{ marginTop: "0.5rem" }}>
+              <select
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleAddEntry(type as any, e.target.value);
+                    e.target.value = "";
+                  }
+                }}
+              >
+                <option value="">Add {type} entry</option>
+                {all.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
