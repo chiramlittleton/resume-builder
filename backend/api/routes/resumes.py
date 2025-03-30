@@ -18,6 +18,11 @@ router = APIRouter()
 #     data = payload.dict()
 #     pdf_path = generate_pdf(data)
 #     return FileResponse(path=pdf_path, media_type="application/pdf", filename="resume.pdf")
+@router.post("/generate-resume")
+async def generate_resume_from_payload(payload: dict):
+    print(payload)
+    pdf_path = generate_pdf(payload)
+    return FileResponse(pdf_path, media_type="application/pdf", filename="resume.pdf")
 
 @router.post("/generate-draft-resume")
 async def generate_resume_from_draft(draft_name: str = Query(...)):

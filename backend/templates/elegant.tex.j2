@@ -1,0 +1,106 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{hyperref}
+
+\definecolor{navyblue}{RGB}{0,54,123}
+\pagestyle{empty}
+
+\begin{document}
+
+{\LARGE\textbf{\textcolor{navyblue}{{ contact.name | latex_escape }}}}
+
+\vspace{0.5em}
+
+{% if contact.phone %}
+\noindent \textbf{Phone:} {{ contact.phone | latex_escape }} \\
+{% endif %}
+{% if contact.email %}
+\noindent \textbf{Email:} \href{mailto:{{ contact.email }}}{{ contact.email | latex_escape }} \\
+{% endif %}
+{% if contact.website %}
+\noindent \textbf{Website:} \href{ {{ contact.website }} }{ {{ contact.website | latex_escape }} } \\
+{% endif %}
+
+\vspace{1em}
+
+{% if education %}
+\section*{Education}
+{% for edu in education %}
+\textbf{ {{ edu.degree | latex_escape }} } — {{ edu.school | latex_escape }} \hfill {{ edu.years | latex_escape }} \\
+{% if edu.details %}
+{% for detail in edu.details %}
+\textit{- {{ detail | latex_escape }}} \\
+{% endfor %}
+{% endif %}
+\vspace{0.5em}
+{% endfor %}
+{% endif %}
+
+{% if experience %}
+\section*{Work Experience}
+{% for job in experience %}
+\textbf{ {{ job.title | latex_escape }} } — {{ job.company | latex_escape }} \hfill {{ job.date | latex_escape }} \\
+\textit{ {{ job.location | latex_escape }} } \\
+\begin{itemize}
+{% for bullet in job.bullets %}
+  \item {{ bullet | latex_escape }}
+{% endfor %}
+\end{itemize}
+\vspace{0.5em}
+{% endfor %}
+{% endif %}
+
+{% if projects %}
+\section*{Projects}
+{% for project in projects %}
+\textbf{ {{ project.name | latex_escape }} } \hfill {{ project.date | latex_escape }} \\
+\textit{ {{ project.role | latex_escape }} — {{ project.location | latex_escape }} } \\
+\begin{itemize}
+{% for bullet in project.bullets %}
+  \item {{ bullet | latex_escape }}
+{% endfor %}
+\end{itemize}
+\vspace{0.5em}
+{% endfor %}
+{% endif %}
+
+{% if skills %}
+\section*{Technical Skills}
+\begin{tabularx}{\linewidth}{@{} >{\bfseries}l @{\hspace{3ex}} X @{}}
+{% for skill in skills %}
+{{ skill.category | latex_escape }} & {{ skill.items | join(", ") | latex_escape }} \\
+{% endfor %}
+\end{tabularx}
+{% endif %}
+
+{% if languages %}
+\section*{Languages}
+\begin{tabularx}{\linewidth}{@{} >{\bfseries}l @{\hspace{3ex}} X @{}}
+{% for lang in languages %}
+{{ lang.name | latex_escape }} & {{ lang.proficiency | latex_escape }} \\
+{% endfor %}
+\end{tabularx}
+{% endif %}
+
+{% if certifications %}
+\section*{Certifications & Learning}
+\begin{tabularx}{\linewidth}{@{} >{\bfseries}l @{\hspace{3ex}} X @{}}
+{% for cert in certifications %}
+{{ cert.name | latex_escape }} & {{ cert.issuer | latex_escape }} ({{ cert.year | latex_escape }}) \\
+{% endfor %}
+\end{tabularx}
+{% endif %}
+
+{% if memberships %}
+\section*{Memberships}
+\begin{tabularx}{\linewidth}{@{} >{\bfseries}l @{\hspace{3ex}} X @{}}
+{% for member in memberships %}
+{{ member.name | latex_escape }} & {{ member.description | latex_escape }} \\
+{% endfor %}
+\end{tabularx}
+{% endif %}
+
+\end{document}

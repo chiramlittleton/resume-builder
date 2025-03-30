@@ -186,12 +186,11 @@ export default function App() {
             onClick={async () => {
               if (!selectedDraft?.draftName) return;
 
-              const response = await fetch(
-                `http://localhost:8000/generate-draft-resume?draft_name=${selectedDraft.draftName}`,
-                {
-                  method: "POST",
-                }
-              );
+            const response = await fetch(`${BASE_URL}/generate-resume`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(selectedDraft),
+            });
 
               if (!response.ok) {
                 alert("Failed to generate PDF");

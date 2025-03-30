@@ -6,6 +6,7 @@ MONGO_URL = "mongodb://localhost:27017"
 client = AsyncIOMotorClient(MONGO_URL)
 db = client.resume_db
 
+
 async def seed_entries_and_draft():
     experience = [
         {
@@ -91,10 +92,8 @@ async def seed_entries_and_draft():
     await db.entries.delete_many({})
     await db.entries.insert_many(experience + projects + education + [contact])
 
-    draft = {
-        "draft_name": "Full Resume Draft",
+    shared_draft_data = {
         "name": "Chiram Littleton",
-        "template_name": "simple-modern",
         "contact_id": contact["id"],
         "experience_ids": [e["id"] for e in experience],
         "education_ids": [e["id"] for e in education],
@@ -103,13 +102,28 @@ async def seed_entries_and_draft():
             "Java", "SQL", "Python", "React", "GraphQL", "AWS", "Kafka", "Docker", "Redis"
         ],
         "certificates": ["Certified Java Programmer", "AWS certified cloud practitioner"],
-        "user_id": "demo-user"  # optional
+        "user_id": "demo-user"
     }
 
-    print("📝 Creating draft...")
+    print("📝 Creating drafts...")
     await db.drafts.delete_many({})
-    result = await db.drafts.insert_one(draft)
-    print(f"✅ Draft created with _id: {result.inserted_id}")
+
+    draft_simple = {
+        "draft_name": "Full Resume Draft",
+        "template_name": "simple-modern",
+        **shared_draft_data
+    }
+    draft_elegant = {
+        "draft_name": "Elegant Resume Draft",
+        "template_name": "elegant",
+        **shared_draft_data
+    }
+
+    result_simple = await db.drafts.insert_one(draft_simple)
+    result_elegant = await db.drafts.insert_one(draft_elegant)
+
+    print(f"✅ Drafts created: simple={result_simple.inserted_id}, elegant={result_elegant.inserted_id}")
+
 
 if __name__ == "__main__":
     asyncio.run(seed_entries_and_draft())

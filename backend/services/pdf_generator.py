@@ -6,7 +6,15 @@ from shutil import copyfile
 from jinja2 import Environment, FileSystemLoader, pass_context
 
 # Jinja2 environment setup
-env = Environment(loader=FileSystemLoader("backend/templates"))
+env = Environment(
+    loader=FileSystemLoader("backend/templates"),
+    block_start_string="{%",
+    block_end_string="%}",
+    variable_start_string="{{",
+    variable_end_string="}}",
+    comment_start_string="{#",
+    comment_end_string="#}"
+)
 
 # LaTeX escape map for special characters
 LATEX_ESCAPE_MAP = {
@@ -30,7 +38,7 @@ env.filters['latex_escape'] = latex_escape
 
 def generate_pdf(data: dict) -> str:
     # Extract and remove template name
-    template_name = data.pop("template_name", "resume")
+    template_name = data.pop("templateName", "resume")
     template = env.get_template(f"{template_name}.tex.j2")
 
     # Render LaTeX using Jinja2
