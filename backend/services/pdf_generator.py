@@ -36,9 +36,9 @@ def generate_pdf(data: dict) -> str:
     # Render LaTeX using Jinja2
     rendered_tex = template.render(data)
 
-    # Prepare output file paths
+    # Prepare output file paths in /tmp
     uid = uuid4().hex
-    output_dir = Path(".")
+    output_dir = Path("/tmp")
     tex_file = output_dir / f"{uid}.tex"
     pdf_file = tex_file.with_suffix(".pdf")
 
@@ -47,14 +47,14 @@ def generate_pdf(data: dict) -> str:
         f.write(rendered_tex)
 
     # Copy class file if used
-    cls_path = Path("templates") / "my-resume.cls"
+    cls_path = Path("backend/templates") / "my-resume.cls"
     if cls_path.exists():
         copyfile(cls_path, output_dir / "my-resume.cls")
 
     try:
-        print(f"🧪 Running pdflatex on {tex_file.name}...")
+        print(f"🧪 Running pdflatex on {tex_file.name} in /tmp...")
         result = subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", str(tex_file.name)],
+            ["pdflatex", "-interaction=nonstopmode", tex_file.name],
             check=True,
             cwd=output_dir,
             stdout=subprocess.PIPE,
