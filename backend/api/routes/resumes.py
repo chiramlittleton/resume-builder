@@ -13,17 +13,13 @@ from backend.services.pdf_generator import generate_pdf
 
 router = APIRouter()
 
-# @router.post("/generate-resume")
-# def generate_resume(payload: Union[ResumeData, TemplateOnly] = Body(...)):
-#     data = payload.dict()
-#     pdf_path = generate_pdf(data)
-#     return FileResponse(path=pdf_path, media_type="application/pdf", filename="resume.pdf")
 @router.post("/generate-resume")
 async def generate_resume_from_payload(payload: dict):
-    print(payload)
+    # print(payload)
     pdf_path = generate_pdf(payload)
     return FileResponse(pdf_path, media_type="application/pdf", filename="resume.pdf")
 
+# this code is probably broken
 @router.post("/generate-draft-resume")
 async def generate_resume_from_draft(draft_name: str = Query(...)):
     draft = await db.drafts.find_one({"draft_name": draft_name})

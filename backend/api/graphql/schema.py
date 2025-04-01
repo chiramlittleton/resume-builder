@@ -1,82 +1,183 @@
+from __future__ import annotations
+
 import strawberry
-from typing import List, Optional
+from typing import List, Optional, Union
 from backend.db.mongo import db
 from backend.api.util import clean_for_gql
 
-@strawberry.type
-class Contact:
-    id: str
-    type: str
-    name: str
-    email: str
-    phone: str
-    website: str
+
+# === ENTRY TYPES ===
 
 @strawberry.type
-class Entry:
+class ContactEntry:
     id: str
-    type: str
+    type: str = "contact"
     name: str
-    title: Optional[str] = None
-    company: Optional[str] = None
-    date: Optional[str] = None
-    bullets: Optional[List[str]] = None
-    degree: Optional[str] = None
-    school: Optional[str] = None
-    years: Optional[str] = None
+    location: str
+    phone: str
+    email: str
+    website: Optional[str]
+    github: Optional[str]
+    linkedin: Optional[str]
+
+
+@strawberry.type
+class SummaryEntry:
+    id: str
+    type: str = "summary"
+    text: str
+
+
+@strawberry.type
+class SkillsGroup:
+    name: str
+    items: List[str]
+
+
+@strawberry.type
+class SkillsEntry:
+    id: str
+    type: str = "skills"
+    groups: List[SkillsGroup]
+
+
+@strawberry.type
+class ExperienceEntry:
+    id: str
+    type: str = "experience"
+    title: str
+    organization: str
+    location: str
+    dateRange: str
+    bulletPoints: List[str]
+    technologies: List[str]
+
+
+@strawberry.type
+class ProjectEntry:
+    id: str
+    type: str = "project"
+    name: str
+    url: Optional[str]
+    description: str
+    technologies: List[str]
+
+
+@strawberry.type
+class Education:
+    school: str
+    degree: str
+
+
+@strawberry.type
+class EducationCertEntry:
+    id: str
+    type: str = "educationCerts"
+    education: List[Education]
+    certifications: List[str]
+
+
+@strawberry.type
+class KeywordsEntry:
+    id: str
+    type: str = "keywords"
+    items: List[str]
+
+
+# === UNION TYPE ===
+
+Entry = strawberry.union(
+    "Entry",
+    (
+        ContactEntry,
+        SummaryEntry,
+        SkillsEntry,
+        ExperienceEntry,
+        ProjectEntry,
+        EducationCertEntry,
+        KeywordsEntry,
+    ),
+)
+
+
+# === DRAFT ===
 
 @strawberry.type
 class Draft:
-    draft_name: str
-    template_name: str
+    id: str
     name: str
-    user_id: Optional[str] = None
-    contact_id: Optional[str]
-    experience_ids: List[str]
-    education_ids: List[str]
-    project_ids: List[str]
-    skills: List[str]
-    certificates: List[str]
+    templateName: str
+    entries: List[Entry]
 
-    @strawberry.field
-    async def experience(self) -> List[Entry]:
-        if not self.experience_ids:
-            return []
-        results = await db.entries.find({"id": {"$in": self.experience_ids}}).to_list(None)
-        return [Entry(**e) for e in clean_for_gql(results)]
 
-    @strawberry.field
-    async def education(self) -> List[Entry]:
-        if not self.education_ids:
-            return []
-        results = await db.entries.find({"id": {"$in": self.education_ids}}).to_list(None)
-        return [Entry(**e) for e in clean_for_gql(results)]
-
-    @strawberry.field
-    async def projects(self) -> List[Entry]:
-        if not self.project_ids:
-            return []
-        results = await db.entries.find({"id": {"$in": self.project_ids}}).to_list(None)
-        return [Entry(**p) for p in clean_for_gql(results)]
-
-    @strawberry.field
-    async def contact(self) -> Optional[Contact]:
-        if self.contact_id:
-            doc = await db.entries.find_one({"id": self.contact_id, "type": "contact"})
-            if doc:
-                return Contact(**clean_for_gql(doc))
-        return None
+# === QUERY ===
 
 @strawberry.type
 class Query:
     @strawberry.field
     async def drafts(self) -> List[Draft]:
-        drafts = await db.drafts.find().to_list(None)
-        return [Draft(**d) for d in clean_for_gql(drafts)]
+        raw_drafts = await db.drafts.find().to_list(None)
+        raw_entries = await db.entries.find().to_list(None)
 
-    @strawberry.field
-    async def entries(self, type: str) -> List[Entry]:
-        entries = await db.entries.find({"type": type}).to_list(None)
-        return [Entry(**e) for e in clean_for_gql(entries)]
+        draft_map = {d["id"]: d for d in clean_for_gql(raw_drafts)}
+        entry_map = {e["id"]: e for e in clean_for_gql(raw_entries)}
+
+        result = []
+        for draft_id, draft in draft_map.items():
+            entry_ids = draft.get("entries", [])
+            typed_entries = []
+            for entry_id in entry_ids:
+                raw_entry = entry_map.get(entry_id)
+                if raw_entry:
+                    try:
+                        typed_entries.append(parse_entry(raw_entry))
+                    except Exception as e:
+                        print(f"Failed to parse entry {entry_id}: {e}")
+            result.append(
+                Draft(
+                    id=draft_id,
+                    name=draft["name"],
+                    templateName=draft["templateName"],
+                    entries=typed_entries,
+                )
+            )
+
+        return result
+
+
+# === ENTRY FACTORY ===
+
+def parse_entry(entry: dict) -> Entry:
+    t = entry.get("type")
+    if t == "summary":
+        return SummaryEntry(**entry)
+    if t == "skills":
+        # hydrate nested objects
+        groups = [SkillsGroup(**g) for g in entry["groups"]]
+        return SkillsEntry(id=entry["id"], type=entry["type"], groups=groups)
+    if t == "experience":
+        return ExperienceEntry(**entry)
+    if t == "project":
+        return ProjectEntry(**entry)
+    if t == "educationCerts":
+        education = [Education(**e) for e in entry["education"]]
+        return EducationCertEntry(
+            id=entry["id"],
+            type=entry["type"],
+            education=education,
+            certifications=entry["certifications"],
+        )
+    if t == "keywords":
+        return KeywordsEntry(**entry)
+    if t == "contact":
+        required_fields = ["id", "name", "location", "phone", "email"]
+        for field in required_fields:
+            if field not in entry:
+                raise ValueError(f"Missing required field '{field}' in contact entry: {entry}")
+        return ContactEntry(**entry)
+    raise ValueError(f"Unsupported entry type: {t}")
+
+
+# === SCHEMA ===
 
 schema = strawberry.Schema(query=Query)

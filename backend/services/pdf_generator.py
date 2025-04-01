@@ -36,41 +36,60 @@ def latex_escape(ctx, value):
 
 env.filters['latex_escape'] = latex_escape
 
+def recursively_escape(obj):
+    if isinstance(obj, dict):
+        return {k: recursively_escape(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [recursively_escape(i) for i in obj]
+    elif isinstance(obj, str):
+        return latex_escape({}, obj)
+    return obj
+
 def generate_pdf(data: dict) -> str:
+    # print("📦 Input data:", data)
+
     # Extract and remove template name
     template_name = data.pop("templateName", "resume")
     template = env.get_template(f"{template_name}.tex.j2")
 
-    # Render LaTeX using Jinja2
-    rendered_tex = template.render(data)
+    # Extract the contact entry and promote it to a top-level field
+    entries = data.get("entries", [])
+    contact_entry = next((e for e in entries if e.get("__typename") == "ContactEntry"), None)
+    data["contact"] = contact_entry
 
-    # Prepare output file paths in /tmp
+    # Escape LaTeX special characters
+    escaped_data = recursively_escape(data)
+
+    # Render LaTeX
+    rendered_tex = template.render(escaped_data)
+
+    # Prepare output file paths
     uid = uuid4().hex
     output_dir = Path("/tmp")
     tex_file = output_dir / f"{uid}.tex"
     pdf_file = tex_file.with_suffix(".pdf")
 
-    # Save .tex file
+    # Save rendered .tex
     with open(tex_file, "w") as f:
         f.write(rendered_tex)
 
-    # Copy class file if used
+    # Copy class file if needed
     cls_path = Path("backend/templates") / "my-resume.cls"
     if cls_path.exists():
         copyfile(cls_path, output_dir / "my-resume.cls")
 
     try:
-        print(f"🧪 Running pdflatex on {tex_file.name} in /tmp...")
-        result = subprocess.run(
+        print(f"🧪 Running pdflatex on {tex_file.name}...")
+        subprocess.run(
             ["pdflatex", "-interaction=nonstopmode", tex_file.name],
             check=True,
             cwd=output_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        print("✅ pdflatex finished successfully.")
+        print("✅ PDF generated successfully.")
     except subprocess.CalledProcessError as e:
-        print("❌ LaTeX compilation failed!")
+        print("❌ PDF generation failed!")
         print("\n--- Rendered LaTeX ---\n")
         print(rendered_tex)
         print("\n--- STDOUT ---\n")

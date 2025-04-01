@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from "react";
-import EntryGroup from "./EntryGroup";
 import DraftSelector from "./DraftSelector";
 import DraftDetails from "./DraftDetails";
 import BASE_URL from "./config";
 
 type Entry = {
-  _id: string;
-  id: string;
-  type: string;
   name: string;
   [key: string]: any;
 };
 
 type Draft = {
-  draftName: string;
-  templateName: string;
+  id: string;
   name: string;
+  templateName: string;
   contact?: Entry;
   experience?: Entry[];
   education?: Entry[];
@@ -25,61 +21,74 @@ type Draft = {
 };
 
 export default function App() {
-  const [entries, setEntries] = useState<Record<string, Entry[]>>({});
-  const [edits, setEdits] = useState<Record<string, Entry>>({});
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [selectedDraftName, setSelectedDraftName] = useState<string | null>(null);
   const [templates, setTemplates] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
-  const grouped = ["contact", "experience", "education", "project"];
-
   useEffect(() => {
-    async function fetchAll() {
-      const entryData: Record<string, Entry[]> = {};
-      for (const type of grouped) {
-        const res = await fetch(`${BASE_URL}/entries/${type}`);
-        entryData[type] = await res.json();
-      }
-      setEntries(entryData);
-    }
-
     async function fetchDrafts() {
-      const query = `
-        query {
-          drafts {
-            draftName
-            templateName
-            name
-            skills
-            certificates
-            contact {
-              name
-              email
-              phone
-              website
+    const query = `
+      query {
+        drafts {
+          id
+          name
+          templateName
+          entries {
+            __typename
+            ... on SummaryEntry {
+              id
+              text
             }
-            experience {
-              name
+            ... on SkillsEntry {
+              id
+              groups {
+                name
+                items
+              }
+            }
+            ... on ExperienceEntry {
+              id
               title
-              company
-              date
-              bullets
+              organization
+              location
+              dateRange
+              bulletPoints
+              technologies
             }
-            education {
+            ... on ProjectEntry {
+              id
               name
-              school
-              degree
-              years
+              url
+              description
+              technologies
             }
-            projects {
+            ... on EducationCertEntry {
+              id
+              education {
+                school
+                degree
+              }
+              certifications
+            }
+            ... on KeywordsEntry {
+              id
+              items
+            }
+            ... on ContactEntry {
+              id
               name
-              date
-              bullets
+              location
+              phone
+              email
+              website
+              github
+              linkedin
             }
           }
         }
-      `;
+      }
+    `;
 
       const res = await fetch(`${BASE_URL}/graphql`, {
         method: "POST",
@@ -100,51 +109,21 @@ export default function App() {
       }
     }
 
-    fetchAll();
     fetchDrafts();
     fetchTemplates();
   }, []);
 
-  const handleEdit = (id: string, field: string, value: any) => {
-    setEdits((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value,
-      },
-    }));
-  };
+useEffect(() => {
+  console.log("Selected template:", selectedTemplate);
+  console.log("All drafts:", drafts);
+  console.log("Filtered drafts:", drafts.filter((d) => d.templateName === selectedTemplate));
+}, [selectedTemplate, drafts]);
 
-  const handleSave = async (entry: Entry) => {
-    const updated = edits[entry.id] || entry;
-    await fetch(`${BASE_URL}/entries/${entry.type}/${entry.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    });
-    window.location.reload();
-  };
-
-  const selectedDraft = drafts.find((d) => d.draftName === selectedDraftName);
+  const selectedDraft = drafts.find((d) => d.name === selectedDraftName);
 
   return (
     <div style={{ padding: "2rem" }}>
       <h1>Resume Builder</h1>
-
-      <h2>All Entries</h2>
-      {grouped.map((type) =>
-        entries[type]?.length ? (
-          <EntryGroup
-            key={type}
-            type={type}
-            entries={entries[type]}
-            edits={edits}
-            onEdit={handleEdit}
-            onSave={handleSave}
-          />
-        ) : null
-      )}
-
       <hr />
 
       <div style={{ marginBottom: "2rem" }}>
@@ -168,49 +147,49 @@ export default function App() {
         onSelect={setSelectedDraftName}
       />
 
-    {selectedDraft && (
-      <>
-        <DraftDetails draft={selectedDraft} entries={entries} />
+      {selectedDraft && (
+        <>
+          <DraftDetails draft={selectedDraft} />
 
-        <div style={{ marginTop: "3rem", textAlign: "center" }}>
-          <button
-            style={{
-              fontSize: "1.5rem",
-              padding: "1rem 2rem",
-              backgroundColor: "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-            onClick={async () => {
-              if (!selectedDraft?.draftName) return;
+          <div style={{ marginTop: "3rem", textAlign: "center" }}>
+            <button
+              style={{
+                fontSize: "1.5rem",
+                padding: "1rem 2rem",
+                backgroundColor: "#4CAF50",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+              onClick={async () => {
+                if (!selectedDraft?.name) return;
 
-            const response = await fetch(`${BASE_URL}/generate-resume`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(selectedDraft),
-            });
+                const response = await fetch(`${BASE_URL}/generate-resume`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(selectedDraft),
+                });
 
-              if (!response.ok) {
-                alert("Failed to generate PDF");
-                return;
-              }
+                if (!response.ok) {
+                  alert("Failed to generate PDF");
+                  return;
+                }
 
-              const blob = await response.blob();
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = "resume.pdf";
-              a.click();
-              window.URL.revokeObjectURL(url);
-            }}
-          >
-            📄 Render PDF
-          </button>
-        </div>
-      </>
-    )}
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "resume.pdf";
+                a.click();
+                window.URL.revokeObjectURL(url);
+              }}
+            >
+              📄 Render PDF
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

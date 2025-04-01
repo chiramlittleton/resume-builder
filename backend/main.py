@@ -16,9 +16,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# REST routes
-app.include_router(entries.router)
-app.include_router(drafts.router)
+# REST routes - deprecated
+# app.include_router(entries.router)
+# app.include_router(drafts.router)
 app.include_router(templates.router)
 app.include_router(resumes.router)
 

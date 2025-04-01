@@ -1,0 +1,84 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{hyperref}
+\pagestyle{empty}
+
+\begin{document}
+
+% === CONTACT INFO ===
+\begin{center}
+  \textbf{\LARGE {{ contact.name | upper }}} \\[0.5em]
+  {{ contact.location }} \quad\textbullet\quad {{ contact.phone }} \quad\textbullet\quad {{ contact.email }}
+  {% if contact.linkedin or contact.github %}
+    \quad\textbullet\quad
+    {% if contact.linkedin %}\href{https://{{ contact.linkedin }}}{{ contact.linkedin }}{% endif %}
+    {% if contact.linkedin and contact.github %}\quad\textbullet\quad{% endif %}
+    {% if contact.github %}\href{https://{{ contact.github }}}{{ contact.github }}{% endif %}
+  {% endif %}
+\end{center}
+
+\vspace{1em}
+
+% === PROFESSIONAL SUMMARY ===
+\section*{Professional Summary}
+{% for entry in entries if entry.__typename == "SummaryEntry" %}
+{{ entry.text }}
+{% endfor %}
+
+\vspace{1em}
+
+% === SKILLS ===
+\section*{Skills}
+{% for entry in entries if entry.__typename == "SkillsEntry" %}
+  {% for group in entry.groups %}
+\textbf{ {{ group.name }} }: {{ group["items"] | join(", ") }}\par
+  {% endfor %}
+{% endfor %}
+
+\vspace{1em}
+
+% === PROFESSIONAL EXPERIENCE ===
+\section*{Professional Experience}
+{% for entry in entries if entry.__typename == "ExperienceEntry" %}
+\textbf{ {{ entry.title }} } {{ entry.organization }} -- {\textit{ {{ entry.location }} }} \hfill {{ entry.dateRange }}
+
+{% for bullet in entry.bulletPoints %}
+\hspace{1em}\textbullet\ {{ bullet }}\par
+{% endfor %}
+
+\hspace{.5em}\textbf{Stack:} {{ entry.technologies | join(", ") }}\par
+\vspace{1em}
+{% endfor %}
+
+% === PROJECTS ===
+\section*{Projects}
+{% for entry in entries if entry.__typename == "ProjectEntry" %}
+\textbf{ {{ entry.name }} }
+{% if entry.url %} — \href{https://{{ entry.url }}}{{ entry.url }}{% endif %}
+
+{{ entry.description }}\par
+\hspace{.5em}\textbf{Technologies:} {{ entry.technologies | join(", ") }}\par
+\vspace{1em}
+{% endfor %}
+
+% === EDUCATION & CERTIFICATIONS ===
+\section*{Education \& Certifications}
+{% for entry in entries if entry.__typename == "EducationCertEntry" %}
+  {% for edu in entry.education %}
+\textbf{ {{ edu.school }} } — {{ edu.degree }}\par
+  {% endfor %}
+
+\vspace{0.5em}
+\textbf{Certifications:} {{ entry.certifications | join(", ") }}\par
+{% endfor %}
+
+\vspace{1em}
+
+% === KEYWORDS / TECHNOLOGY INDEX ===
+\section*{Keywords / Technology Index}
+{% for entry in entries if entry.__typename == "KeywordsEntry" %}
+{{ entry["items"] | join(", ") }}
+{% endfor %}
+
+\end{document}

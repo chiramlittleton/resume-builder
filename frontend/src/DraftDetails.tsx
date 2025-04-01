@@ -1,134 +1,121 @@
 import React from "react";
 
-type Entry = {
-  id: string;
-  name: string;
-  [key: string]: any;
-};
+type Entry =
+  | { __typename: "ContactEntry"; id: string; name: string; location: string; phone: string; email: string; website?: string; github?: string; linkedin?: string }
+  | { __typename: "SummaryEntry"; id: string; text: string }
+  | { __typename: "SkillsEntry"; id: string; groups: { name: string; items: string[] }[] }
+  | { __typename: "ExperienceEntry"; id: string; title: string; organization: string; location?: string; dateRange: string; bulletPoints: string[]; technologies: string[] }
+  | { __typename: "ProjectEntry"; id: string; name: string; url?: string; description: string; technologies: string[] }
+  | { __typename: "EducationCertEntry"; id: string; education: { school: string; degree: string }[]; certifications: string[] }
+  | { __typename: "KeywordsEntry"; id: string; items: string[] };
 
 type Draft = {
-  draftName: string;
-  templateName: string;
+  id: string;
   name: string;
-  contact?: Entry;
-  experience: Entry[];
-  education: Entry[];
-  projects: Entry[];
-  skills: string[];
-  certificates: string[];
+  templateName: string;
+  entries: Entry[];
 };
 
 type Props = {
   draft: Draft;
-  entries: Record<string, Entry[]>;
 };
 
-export default function DraftDetails({ draft, entries }: Props) {
-  const handleContactChange = (id: string) => {
-    console.log(`Change contact to: ${id}`);
-    // Add actual update logic here
-  };
+export default function DraftDetails({ draft }: Props) {
+  const getEntries = <T extends Entry["__typename"]>(typename: T): Extract<Entry, { __typename: T }>[] =>
+    draft.entries.filter((e) => e.__typename === typename) as any;
 
-  const handleEntryChange = (
-    type: "experience" | "education" | "projects",
-    index: number,
-    newId: string
-  ) => {
-    console.log(`Change ${type} entry at index ${index} to: ${newId}`);
-    // Add update logic here
-  };
-
-  const handleRemoveEntry = (
-    type: "experience" | "education" | "projects",
-    index: number
-  ) => {
-    console.log(`Remove ${type} entry at index ${index}`);
-    // Add update logic here
-  };
-
-  const handleAddEntry = (type: "experience" | "education" | "projects", id: string) => {
-    console.log(`Add ${type} entry with ID: ${id}`);
-    // Add logic here
-  };
+  const contact = getEntries("ContactEntry")[0];
+  const summary = getEntries("SummaryEntry")[0];
+  const skills = getEntries("SkillsEntry")[0];
+  const experience = getEntries("ExperienceEntry");
+  const projects = getEntries("ProjectEntry");
+  const educationCert = getEntries("EducationCertEntry")[0];
+  const keywords = getEntries("KeywordsEntry")[0];
 
   return (
     <div style={{ marginTop: "2rem" }}>
-      <h3>Draft: {draft.draftName}</h3>
+      <h2>Draft: {draft.name}</h2>
       <p><strong>Template:</strong> {draft.templateName}</p>
-      <p><strong>Resume Name:</strong> {draft.name}</p>
 
-      {/* Contact Selection */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <strong>CONTACT:</strong>
-        <select
-          value={draft.contact?.id || ""}
-          onChange={(e) => handleContactChange(e.target.value)}
-        >
-          <option value="">Select a contact</option>
-          {(entries["contact"] || []).map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {entry.name}
-            </option>
+      {contact && (
+        <>
+          <h3>Contact</h3>
+          <p>{contact.name}</p>
+          <p>{contact.location}</p>
+          <p>{contact.phone} — {contact.email}</p>
+          {contact.linkedin && <p>LinkedIn: {contact.linkedin}</p>}
+          {contact.github && <p>GitHub: {contact.github}</p>}
+        </>
+      )}
+
+      {summary && (
+        <>
+          <h3>Professional Summary</h3>
+          <p>{summary.text}</p>
+        </>
+      )}
+
+      {skills && (
+        <>
+          <h3>Skills</h3>
+          {skills.groups.map((group) => (
+            <p key={group.name}>
+              <strong>{group.name}:</strong> {group.items.join(", ")}
+            </p>
           ))}
-        </select>
-      </div>
+        </>
+      )}
 
-      {/* Entry Sections */}
-      {["experience", "education", "projects"].map((type) => {
-        const current = draft[type as keyof Draft] as Entry[];
-        const all = entries[type] || [];
-        return (
-          <div key={type} style={{ marginTop: "1.5rem" }}>
-            <strong>{type.toUpperCase()}:</strong>
-            {current.length > 0 ? (
-              current.map((entry, index) => (
-                <div key={entry.id} style={{ display: "flex", marginTop: "0.5rem" }}>
-                  <select
-                    value={entry.id}
-                    onChange={(e) =>
-                      handleEntryChange(type as any, index, e.target.value)
-                    }
-                  >
-                    {all.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => handleRemoveEntry(type as any, index)}
-                    style={{ marginLeft: "0.5rem" }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p>(none)</p>
-            )}
-
-            {/* Add New Entry */}
-            <div style={{ marginTop: "0.5rem" }}>
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handleAddEntry(type as any, e.target.value);
-                    e.target.value = "";
-                  }
-                }}
-              >
-                <option value="">Add {type} entry</option>
-                {all.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name}
-                  </option>
+      {experience.length > 0 && (
+        <>
+          <h3>Professional Experience</h3>
+          {experience.map((job) => (
+            <div key={job.id} style={{ marginBottom: "1rem" }}>
+              <strong>{job.title}</strong> — {job.organization} ({job.dateRange})
+              {job.location && <div><em>{job.location}</em></div>}
+              <ul>
+                {job.bulletPoints.map((point, i) => (
+                  <li key={i}>{point}</li>
                 ))}
-              </select>
+              </ul>
+              <div><strong>Stack:</strong> {job.technologies.join(", ")}</div>
             </div>
-          </div>
-        );
-      })}
+          ))}
+        </>
+      )}
+
+      {projects.length > 0 && (
+        <>
+          <h3>Projects</h3>
+          {projects.map((p) => (
+            <div key={p.id} style={{ marginBottom: "1rem" }}>
+              <strong>{p.name}</strong>
+              {p.url && (
+                <span> — <a href={p.url} target="_blank" rel="noreferrer">{p.url}</a></span>
+              )}
+              <p>{p.description}</p>
+              <div><strong>Technologies:</strong> {p.technologies.join(", ")}</div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {educationCert && (
+        <>
+          <h3>Education & Certifications</h3>
+          {educationCert.education.map((edu, i) => (
+            <p key={i}><strong>{edu.school}</strong> — {edu.degree}</p>
+          ))}
+          <p><strong>Certifications:</strong> {educationCert.certifications.join(", ")}</p>
+        </>
+      )}
+
+      {keywords && (
+        <>
+          <h3>Keywords</h3>
+          <p>{keywords.items.join(", ")}</p>
+        </>
+      )}
     </div>
   );
 }

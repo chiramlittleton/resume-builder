@@ -7,8 +7,8 @@ export default function DraftSelector({ drafts, selectedName, onSelect }) {
       <select onChange={(e) => onSelect(e.target.value)} value={selectedName || ""}>
         <option value="">-- Select Draft --</option>
         {drafts.map((d) => (
-          <option key={d.draftName} value={d.draftName}>
-            {d.draftName}
+          <option key={d.name} value={d.name}>
+            {d.name}
           </option>
         ))}
       </select>
